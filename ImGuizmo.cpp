@@ -20,7 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+
 #include "imgui.h"
+#include "../../ForceEditor/Sources/ForceEditor/EditorElement.h"
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -41,7 +43,7 @@ namespace ImGuizmo
    static const float RAD2DEG = (180.f / ZPI);
    static const float DEG2RAD = (ZPI / 180.f);
    static float gGizmoSizeClipSpace = 0.15f;
-   const float screenRotateSize = 0.04f;
+   const float screenRotateSize = 0.05f;
 
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
    // utility and math
@@ -162,6 +164,10 @@ namespace ImGuizmo
    struct matrix_t;
    struct vec_t
    {
+   public:
+      vec_t() = default;
+      vec_t(float x, float y = 0.0f, float z = 0.0f, float w = 0.0f)
+         :x(x), y(y), z(z), w(w) {};
    public:
       float x, y, z, w;
 
@@ -695,7 +701,9 @@ namespace ImGuizmo
       "Y : %5.3f Z : %5.3f", "X : %5.3f Z : %5.3f", "X : %5.3f Y : %5.3f",
       "X : %5.3f Y : %5.3f Z : %5.3f" };
    static const char* scaleInfoMask[] = { "X : %5.2f", "Y : %5.2f", "Z : %5.2f", "XYZ : %5.2f" };
-   static const char* rotationInfoMask[] = { "X : %5.2f deg %5.2f rad", "Y : %5.2f deg %5.2f rad", "Z : %5.2f deg %5.2f rad", "Screen : %5.2f deg %5.2f rad" };
+   using ForceEditor::EditorElement;
+   static const char* rotationInfoMask[] = { EditorElement::RotationInfoMask[0], EditorElement::RotationInfoMask[1],
+      EditorElement::RotationInfoMask[2], EditorElement::RotationInfoMask[3] };
    static const int translationInfoIndex[] = { 0,0,0, 1,0,0, 2,0,0, 1,2,0, 0,2,0, 0,1,0, 0,1,2 };
    static const float quadMin = 0.5f;
    static const float quadMax = 0.8f;
@@ -1124,8 +1132,8 @@ namespace ImGuizmo
 
       gContext.mRadiusSquareCenter = screenRotateSize * gContext.mHeight;
 
-	  constexpr float circleLineThickness = 6.0f;
-      constexpr float lineThickness = 6.0f;
+	  constexpr float circleLineThickness = 4.0f;
+      constexpr float lineThickness = 4.0f;
       for (int axis = 0; axis < 3; axis++)
       {
          ImVec2 circlePos[halfCircleSegmentCount];
@@ -1170,6 +1178,10 @@ namespace ImGuizmo
 
          ImVec2 destinationPosOnScreen = circlePos[1];
          char tmps[512];
+         rotationInfoMask[0] = EditorElement::RotationInfoMask[0];
+         rotationInfoMask[1] = EditorElement::RotationInfoMask[1];
+         rotationInfoMask[2] = EditorElement::RotationInfoMask[2];
+         rotationInfoMask[3] = EditorElement::RotationInfoMask[3];
          ImFormatString(tmps, sizeof(tmps), rotationInfoMask[type - ROTATE_X], (gContext.mRotationAngle / ZPI) * 180.f, gContext.mRotationAngle);
          drawList->AddText(ImVec2(destinationPosOnScreen.x + 15, destinationPosOnScreen.y + 15), 0xFF000000, tmps);
          drawList->AddText(ImVec2(destinationPosOnScreen.x + 14, destinationPosOnScreen.y + 14), 0xFFFFFFFF, tmps);
@@ -1202,8 +1214,8 @@ namespace ImGuizmo
          scaleDisplay = gContext.mScale;
       }
 
-	  constexpr float lineThickness = 6.0f;
-	  constexpr float circleSize = 12.0f;
+	  constexpr float lineThickness = 4.0f;
+	  constexpr float circleSize = 8.0f;
       for (unsigned int i = 0; i < 3; i++)
       {
          vec_t dirPlaneX, dirPlaneY, dirAxis;
@@ -1226,7 +1238,6 @@ namespace ImGuizmo
             drawList->AddLine(baseSSpace, worldDirSSpace, colors[i + 1], lineThickness);
             drawList->AddCircleFilled(worldDirSSpace, circleSize, colors[i + 1]);
 
-			//Removed by TheCherno
             //if (gContext.mAxisFactor[i] < 0.f)
             //{
             //   DrawHatchedAxis(dirAxis * scaleDisplay[i]);
@@ -1234,20 +1245,23 @@ namespace ImGuizmo
          }
       }
 
-      // draw screen cirle
+      // draw screen circle
       drawList->AddCircleFilled(gContext.mScreenSquareCenter, 6.f, colors[0], 32);
 
       if (gContext.mbUsing && (gContext.mActualID == -1 || gContext.mActualID == gContext.mEditingID))
       {
-         //ImVec2 sourcePosOnScreen = worldToPos(gContext.mMatrixOrigin, gContext.mViewProjection);
+         ImVec2 sourcePosOnScreen = worldToPos(gContext.mMatrixOrigin, gContext.mViewProjection);
          ImVec2 destinationPosOnScreen = worldToPos(gContext.mModel.v.position, gContext.mViewProjection);
-         /*vec_t dif(destinationPosOnScreen.x - sourcePosOnScreen.x, destinationPosOnScreen.y - sourcePosOnScreen.y);
-         dif.Normalize();
-         dif *= 5.f;
-         drawList->AddCircle(sourcePosOnScreen, 6.f, translationLineColor);
-         drawList->AddCircle(destinationPosOnScreen, 6.f, translationLineColor);
+
+         //temp
+         vec_t dif(destinationPosOnScreen.x - sourcePosOnScreen.x, destinationPosOnScreen.y - sourcePosOnScreen.y);
+         dif.Normalize(); //
+         dif *= 5.f;//
+         drawList->AddCircle(sourcePosOnScreen, 6.f, translationLineColor);//
+         drawList->AddCircle(destinationPosOnScreen, 6.f, translationLineColor);//
          drawList->AddLine(ImVec2(sourcePosOnScreen.x + dif.x, sourcePosOnScreen.y + dif.y), ImVec2(destinationPosOnScreen.x - dif.x, destinationPosOnScreen.y - dif.y), translationLineColor, 2.f);
-         */
+         ///
+
          char tmps[512];
          //vec_t deltaInfo = gContext.mModel.v.position - gContext.mMatrixOrigin;
          int componentInfoIndex = (type - SCALE_X) * 3;
@@ -1275,8 +1289,8 @@ namespace ImGuizmo
       // draw
       bool belowAxisLimit = false;
       bool belowPlaneLimit = false;
-	  constexpr float arrowSize = 12.0f;
-      constexpr float lineThickness = 6.0f;
+	  constexpr float arrowSize = 8.0f;
+      constexpr float lineThickness = 4.0f;
       for (unsigned int i = 0; i < 3; ++i)
       {
          vec_t dirPlaneX, dirPlaneY, dirAxis;
@@ -1302,11 +1316,10 @@ namespace ImGuizmo
             drawList->AddTriangleFilled(worldDirSSpace - dir, a + ortogonalDir, a - ortogonalDir, colors[i + 1]);
             // Arrow head end
 
-			//Removed by TheCherno
             //if (gContext.mAxisFactor[i] < 0.f)
-            // {
-            //    DrawHatchedAxis(dirAxis);
-            //}
+           // {
+           //    DrawHatchedAxis(dirAxis);
+           // }
          }
 
          // draw plane
@@ -1347,7 +1360,6 @@ namespace ImGuizmo
 
    static bool CanActivate()
    {
-	   // TODO: Check for key modifiers
       if (ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered() && !ImGui::IsAnyItemActive())
       {
          return true;
@@ -2604,4 +2616,3 @@ namespace ImGuizmo
       ComputeContext(svgView.m16, svgProjection.m16, gContext.mModelSource.m16, gContext.mMode);
    }
 };
-
